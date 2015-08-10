@@ -26,6 +26,8 @@ module HTML
       IGNORE_PARENTS = %w(pre code a style).to_set
 
       def call
+        result[:hashtags] ||= []
+
         search_text_nodes(doc).each do |node|
           content = node.to_html
 
@@ -33,7 +35,7 @@ module HTML
           next if has_ancestor?(node, IGNORE_PARENTS)
 
           html = hashtag_link_filter(content, hashtag_pattern)
-          node.replace(html)
+          node.replace(html) unless html == content
         end
 
         doc
@@ -53,6 +55,8 @@ module HTML
 
       def hashtag_link_filter(text, hashtag_pattern)
         self.class.hashtags_in(text, hashtag_pattern) do |match, tag|
+          result[:hashtags] |= [tag]
+
           link_to_hashtag(tag)
         end
       end

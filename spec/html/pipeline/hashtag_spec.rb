@@ -2,11 +2,18 @@ require 'spec_helper'
 
 describe Html::Pipeline::Hashtag do
   describe '.hashtags_in' do
-    def extract_hashtags(*args)
+    def extract_hashtags(text, context = {})
       tags = []
-      HTML::Pipeline::HashtagFilter.hashtags_in(*args) { |hashtag, tag| tags << tag }
 
-      tags
+      filters = [
+        HTML::Pipeline::MarkdownFilter,
+        HTML::Pipeline::HashtagFilter
+      ]
+
+      pipeline = HTML::Pipeline.new filters
+      result = pipeline.call text, context
+
+      result[:hashtags]
     end
 
     context "extracts latin/numeric hashtags" do
@@ -47,7 +54,7 @@ describe Html::Pipeline::Hashtag do
         invalid_tag = "WWW"
 
         expect(
-          extract_hashtags("Hello ##{valid_tag}! ##{invalid_tag}", custom_pattern)
+          extract_hashtags("Hello ##{valid_tag}! ##{invalid_tag}", hashtag_pattern: custom_pattern)
         ).to eq([valid_tag])
       end
     end
@@ -55,38 +62,49 @@ describe Html::Pipeline::Hashtag do
 
   describe '.call' do
     def filter(html, context = {})
-      HTML::Pipeline::HashtagFilter.new(html, context).call.to_s
+      filters = [
+        HTML::Pipeline::MarkdownFilter,
+        HTML::Pipeline::HashtagFilter
+      ]
+
+      pipeline = HTML::Pipeline.new filters
+      pipeline.call(html, context)
+    end
+
+    def doc(html, context = {})
+      filter(html, context)[:output]
     end
 
     context "should filtering plain text" do
       let(:tag) { 'world' }
-      let(:html) { "<p>Hello #%{tag}!</p>" }
-      let(:result) { "<p>Hello %{link}!</p>" }
+      let(:html) { "<p>Hello ##{tag}!</p>" }
 
       [
         ['default', nil], ['custom', "/tags/%{tag}"]
       ].each do |title, tag_url|
 
         it "should filtering plain text with #{title} context" do
-          url_pattern = tag_url || "/tags/%{tag}"
-          link_pattern = "<a href=\"%{url}\" target=\"_blank\" class=\"hashtag\">#%{tag}</a>"
+          url = (tag_url || "/tags/%{tag}") % { tag: tag }
 
-          url = url_pattern % { tag: tag }
-          link = link_pattern % { url: url, tag: tag }
-
-          puts result % { link: link }
-
-          expect(
-            filter(html % { tag: tag }, tag_url: tag_url)
-          ).to eq(result % { link: link })
+          expect(url).to eq doc(html).search('a').attr('href').value
         end
       end
     end
 
-    %w(pre code style a).each do |tag|
-      it "should not replacing hashtag in #{tag} tags" do
-        html = "<#{tag}>Hello #world!</#{tag}>"
-        expect( filter(html) ).to eq(html)
+    context 'should not replacing hashtag in' do
+      it "links and styles" do
+        html = '<a href="/">Hello <span style="color: #red">#magic</span> #world!</a>'
+        expect( doc(html).search('a').count ).to eq(1)
+      end
+
+      it "code-tags" do
+        html = '<code>Hello <span>#magic</span> #world!</code>'
+        expect( doc(html).search('a') ).to be_empty
+      end
+
+      it 'pre-tags' do
+        html = '<pre>Hello <span>#magic</span> #world!</pre>'
+        expect( doc(html).search('a') ).to be_empty
       end
     end
   end

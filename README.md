@@ -39,21 +39,13 @@ context = {
   :tag_url => '/tags/%{tag}'
 }
 
-pipeline.call(input, context)
-# => <p>Hello <a href="/tags/world" target="_blank" class="hashtag">#world</a>!</p> 
+result = pipeline.call(input, context)
 
-```
+puts result[:output].to_html
+# => "<p>Hello <a href=\"/tags/world\" target=\"_blank\" class=\"hashtag\">#world</a>!</p>\n" 
 
-```ruby
-def extract_tags(*args)
-  tags = []
-  HTML::Pipeline::HashtagFilter.hashtags_in(*args) { |hashtag, tag| tags << tag }
-
-  tags
-end
-
-extract_tags("Hello #world! #welcome")
-# => ["world", "welcome"]
+puts result[:hashtags]
+# => ["world"]
 ```
 
 ## Contributing
