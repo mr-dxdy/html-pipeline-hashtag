@@ -63,7 +63,6 @@ describe Html::Pipeline::Hashtag do
   describe '.call' do
     def filter(html, context = {})
       filters = [
-        HTML::Pipeline::MarkdownFilter,
         HTML::Pipeline::HashtagFilter
       ]
 
