@@ -12,6 +12,7 @@ module HTML
     #                  Example: http://localhost/search?q=%{tag}
     #   :hashtag_pattern - Used to provide a custom regular expression to
     #                      indentify hashtags
+    #   :tag_link_attr - HTML attributes for the link that will be generated
     #
     class HashtagFilter < Filter
       def self.hashtags_in(text, hashtag_pattern = HashtagPattern)
@@ -49,6 +50,14 @@ module HTML
         '/tags/%{tag}'
       end
 
+      def tag_link_attr
+        context[:tag_link_attr] || default_tag_link_attr
+      end
+
+      def default_tag_link_attr
+        "target='_blank' class='hashtag'"
+      end
+
       def hashtag_pattern
         context[:hashtag_pattern] || HashtagPattern
       end
@@ -63,11 +72,11 @@ module HTML
 
       def link_to_hashtag(tag)
         url = tag_url % { tag: tag }
-        link_pattern % { url: url, tag: tag }
+        link_pattern % { url: url, tag: tag, tag_link_attr: tag_link_attr }
       end
 
       def link_pattern
-        "<a href='%{url}' target='_blank' class='hashtag'>#%{tag}</a>"
+        "<a href='%{url}' %{tag_link_attr}>#%{tag}</a>"
       end
     end
   end
